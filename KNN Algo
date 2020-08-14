@@ -1,0 +1,78 @@
+import pandas as pd 
+
+import numpy as np 
+import matplotlib.pyplot as plt 
+
+qw= pd.read_excel('C:/Users/Prabhat Lachhar/Desktop/edulyt/Project - 4 - Train Data.xlsx')
+we= pd.read_excel('C:/Users/Prabhat Lachhar/Desktop/edulyt/Project - 4 - Test Data.xlsx')
+x=qw.iloc[:, :-1]
+y=qw.iloc[:,-1]
+
+
+
+from sklearn.impute import SimpleImputer
+imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+imputer.fit(x[['CPL_Amount','CPL_Term']])
+x[['CPL_Amount','CPL_Term']]=imputer.transform(x[['CPL_Amount','CPL_Term']])
+
+
+x['Credit_His'].fillna(method='ffill', inplace=True)
+x['Sex'].fillna(method='ffill', inplace=True)
+x['Marital_Status'].fillna(method='ffill', inplace=True)
+x['Dependents'].fillna(method='ffill', inplace=True)
+x['SE'].fillna(method='ffill', inplace=True)
+
+
+x['Dependents']=x['Dependents'].astype('object')
+size_mapping = {0:0,1:1,2:2,3:3}
+x['Dependents'] = x['Dependents'].map(size_mapping)
+x['Dependents'].fillna(value=3,inplace=True)
+
+from sklearn.preprocessing import LabelEncoder
+class_le = LabelEncoder()
+y = class_le.fit_transform(y.values)
+
+
+
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+ct=ColumnTransformer([('encoder',OneHotEncoder(),['Sex','Marital_Status','Qual_var','SE', 'Credit_His','Prop_Area'])],'passthrough')
+x = np.array(ct.fit_transform(x), dtype = np.str)
+
+from sklearn.model_selection import  train_test_split
+x_train, x_test, y_train, y_test= train_test_split(x,y,test_size=0.2, random_state=1)
+
+
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+
+x_test=np.delete(x_test,np.s_[13:18],1)
+x_train=np.delete(x_train,np.s_[13:18],1)
+
+
+x_test=np.delete(x_test,np.s_[18:21],1)
+x_train=np.delete(x_train,np.s_[18:21],1)
+
+
+
+Xt=pd.DataFrame(x_train)
+xt=pd.DataFrame(x_test)
+
+
+x_train[:,13:18]=sc.fit_transform(x_train[:,13:18])
+x_test[:,13:18]=sc.fit_transform(x_test[:,13:18])
+
+
+
+from sklearn.neighbors import KNeighborsClassifier
+classifier = KNeighborsClassifier(n_neighbors=5, metric='minkowski',p=2)
+classifier.fit(x_train,y_train)
+
+
+y_pred=classifier.predict(x_test)
+print(np.concatenate((y_pred.reshape(len(y_pred),1),y_test.reshape(len(y_test),1)),1))
+
+from sklearn.metrics import confusion_matrix, accuracy_score
+cm=confusion_matrix(y_test,y_pred)
+print(cm)
+accuracy_score(y_test,y_pred)
